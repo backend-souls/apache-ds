@@ -1,5 +1,5 @@
-FROM ubuntu:16.04
-MAINTAINER ome-devel@lists.openmicroscopy.org.uk
+FROM ubuntu:22.04
+LABEL maintainer=backendsouls
 
 #############################################
 # ApacheDS installation
@@ -19,15 +19,15 @@ VOLUME ${APACHEDS_DATA}
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && apt-get update \
     && apt-get install -y \
-       apt-utils
+    apt-utils
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
     && apt-get install -y \
-       ldap-utils \
-       procps \
-       openjdk-8-jre-headless \
-       curl \
-       jq \
+    ldap-utils \
+    procps \
+    openjdk-8-jre-headless \
+    curl \
+    jq \
     && curl https://downloads.apache.org/directory/apacheds/dist/${APACHEDS_VERSION}/${APACHEDS_ARCHIVE} > ${APACHEDS_ARCHIVE} \
     && dpkg -i ${APACHEDS_ARCHIVE} \
     && rm ${APACHEDS_ARCHIVE}
@@ -54,14 +54,18 @@ RUN chown ${APACHEDS_USER}:${APACHEDS_GROUP} /run.sh \
 
 ADD instance/* ${APACHEDS_BOOTSTRAP}/conf/
 RUN sed -i "s/ads-contextentry:: [A-Za-z0-9\+\=\/]*/ads-contextentry:: $(base64 -w 0 $APACHEDS_BOOTSTRAP/conf/ads-contextentry.decoded)/g" /$APACHEDS_BOOTSTRAP/conf/config.ldif
-ADD ome.ldif ${APACHEDS_BOOTSTRAP}/
+ADD init.ldif ${APACHEDS_BOOTSTRAP}/
 RUN mkdir ${APACHEDS_BOOTSTRAP}/cache \
     && mkdir ${APACHEDS_BOOTSTRAP}/run \
     && mkdir ${APACHEDS_BOOTSTRAP}/log \
     && mkdir ${APACHEDS_BOOTSTRAP}/partitions \
     && chown -R ${APACHEDS_USER}:${APACHEDS_GROUP} ${APACHEDS_BOOTSTRAP}
 
-RUN apt-get install -y python-ldap
+RUN apt-get install -y python3 python3-pip \
+    build-essential python3-dev \
+    libldap2-dev libsasl2-dev ldap-utils tox \
+    lcov valgrind
+RUN pip install python-ldap
 ADD bin/ldapmanager /usr/local/bin/ldapmanager
 
 #############################################
